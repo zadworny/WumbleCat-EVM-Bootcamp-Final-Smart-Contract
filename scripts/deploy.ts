@@ -19,14 +19,14 @@ async function deployAuctionMarketplace() {
 
 async function main() {
   // Deploy the AuctionMarketplace contract and retrieve relevant instances
-  const { publicClient, owner, otherAccount ,AuctionMarketplaceContract } = await deployAuctionMarketplace();
+  const { publicClient, owner, otherAccount, AuctionMarketplaceContract } = await deployAuctionMarketplace();
 
   // Convert values to `bigint` format for price (in wei) and expiry time (in seconds)
   const postTx = await AuctionMarketplaceContract.write.postItem(
   ["Laptop",                                      // Item name
     "A powerful gaming laptop",                    // Item description
-    1000000000000000000n,                          // 1 ETH as the starting price (in wei)
-    BigInt(Math.floor(Date.now() / 1000) + 3600)]  // Expiry time in 1 hour (as bigint)
+    1000n,                          // starting price (in wei)
+    BigInt(Math.floor(Date.now() / 1000) + 360000)]  // Expiry time in 1 hour (as bigint)
   );
 
   console.log("Item posted successfully!");

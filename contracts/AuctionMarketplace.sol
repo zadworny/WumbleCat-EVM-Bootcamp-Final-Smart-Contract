@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract AuctionMarketplace {
+import "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
+
+contract AuctionMarketplace is AutomationCompatibleInterface {
     
     // Struct representing an auction item
     struct AuctionItem {
@@ -16,12 +18,9 @@ contract AuctionMarketplace {
         bool isSold;                  // Whether the item is sold
     }
 
-    // State variables
     mapping(uint256 => AuctionItem) public items; // Mapping of item IDs to Auction Items
-    mapping(uint256 => address) public itemOwners; // Mapping of item IDs to owner addresses
-    uint256 public itemCount;  // Counter to generate unique item IDs
+    uint256 public itemCount;
 
-    // Events
     event ItemPosted(uint256 indexed itemId, address indexed owner, uint256 price);
     event NewHighestBid(uint256 indexed itemId, address indexed bidder, uint256 bidAmount);
     event AuctionFinalized(uint256 indexed itemId, address indexed newOwner, uint256 finalPrice);
@@ -34,8 +33,6 @@ contract AuctionMarketplace {
         uint256 _expiryDate
     ) public {
         itemCount++; // Increment the item counter to generate a new itemId
-
-        // Create a new AuctionItem and assign the owner to the caller (msg.sender)
         items[itemCount] = AuctionItem({
             itemId: itemCount,
             owner: payable(msg.sender),
@@ -47,19 +44,12 @@ contract AuctionMarketplace {
             expiryDate: _expiryDate,
             isSold: false
         });
-
-        // Record the ownership
-        itemOwners[itemCount] = msg.sender;
-
-        // Emit event for item posted
         emit ItemPosted(itemCount, msg.sender, _price);
     }
 
     // Function to place a bid on an auction item
     function placeBid(uint256 _itemId) public payable {
         AuctionItem storage item = items[_itemId];
-        
-        // Ensure the auction is still active and the bid is higher than the current highest bid
         require(block.timestamp < item.expiryDate, "Auction has expired");
         require(msg.value > item.highestBidPrice, "Bid must be higher than the current bid");
         require(!item.isSold, "Item has already been sold");
@@ -73,40 +63,36 @@ contract AuctionMarketplace {
         item.highestBidder = msg.sender;
         item.highestBidPrice = msg.value;
 
-        // Emit event for the new highest bid
         emit NewHighestBid(_itemId, msg.sender, msg.value);
+    }
+
+    // Function that Chainlink Keepers will call to check if an auction needs finalizing
+    function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory /* performData */) {
+        for (uint256 i = 1; i <= itemCount; i++) {
+            if (block.timestamp >= items[i].expiryDate && !items[i].isSold) {
+                return (true, abi.encode(i)); // Perform upkeep on item i
+            }
+        }
+        return (false, "");
+    }
+
+    // Function that Chainlink Keepers will call to perform the upkeep (finalize the auction)
+    function performUpkeep(bytes calldata performData) external override {
+        uint256 itemId = abi.decode(performData, (uint256));
+        finalizeAuction(itemId);  // Call the existing finalizeAuction function
     }
 
     // Function to finalize an auction and transfer ownership
     function finalizeAuction(uint256 _itemId) public {
         AuctionItem storage item = items[_itemId];
-        
-        // Ensure the auction has expired and item has not been sold
         require(block.timestamp >= item.expiryDate, "Auction has not expired yet");
         require(!item.isSold, "Auction is already finalized");
         require(item.highestBidder != address(0), "No bids have been placed");
 
-        // Mark the item as sold
         item.isSold = true;
+        item.owner.transfer(item.highestBidPrice);  // Transfer funds to the owner
+        item.owner = payable(item.highestBidder);   // Transfer ownership to the highest bidder
 
-        // Transfer the funds to the owner
-        item.owner.transfer(item.highestBidPrice);
-
-        // Transfer ownership to the highest bidder
-        itemOwners[_itemId] = item.highestBidder;
-        item.owner = payable(item.highestBidder);
-
-        // Emit event for auction finalized
         emit AuctionFinalized(_itemId, item.highestBidder, item.highestBidPrice);
-    }
-
-    // Function to get the owner of an item
-    function getItemOwner(uint256 _itemId) public view returns (address) {
-        return itemOwners[_itemId];
-    }
-
-    // Function to check if an address is the owner of an item
-    function isOwner(address _address, uint256 _itemId) public view returns (bool) {
-        return itemOwners[_itemId] == _address;
     }
 }

@@ -1,25 +1,26 @@
-import { ethers } from "hardhat";
+import { viem } from "hardhat";
+import { parseEther } from "viem/utils";
 
 async function main() {
-  const contractAddress = "YOUR_DEPLOYED_CONTRACT_ADDRESS";  // Replace with your deployed contract address
-  const AuctionMarketplace = await ethers.getContractAt("AuctionMarketplace", contractAddress);
+  const contractAddress = "0xa436ab0397340f3459a66d67c80204b92219be2b";  // Replace with your deployed contract address
 
-  // Post an item
-  const postTx = await AuctionMarketplace.postItem(
-    "Laptop", 
-    "A powerful gaming laptop", 
-    ethers.utils.parseEther("1"),  // 1 ETH as starting price
-    Math.floor(Date.now() / 1000) + 3600 // Expiry in one hour
+  // Get wallet clients (signers)
+  const [owner] = await viem.getWalletClients();
+  const publicClient = await viem.getPublicClient();
+
+  // Get the deployed AuctionMarketplace contract instance
+  const AuctionMarketplace = await viem.getContractAt(
+    "AuctionMarketplace",
+    contractAddress,
   );
-  await postTx.wait();
-  console.log("Item posted!");
 
   // Place a bid on itemId 1
-  const bidTx = await AuctionMarketplace.placeBid(1, {
-    value: ethers.utils.parseEther("1.5"),  // Bid 1.5 ETH
-  });
-  await bidTx.wait();
+  const bidTx = await AuctionMarketplace.write.placeBid([BigInt(1)], {
+    value: parseEther("0.01"),  // Bid 1.5 ETH
+  });       
   console.log("Bid placed!");
+
+  console.log(bidTx);
 }
 
 main().catch((error) => {
