@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol"; // ETH/USD
+import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol"; // ETH/USD
 
 contract AuctionMarketplace is AutomationCompatibleInterface {
     
