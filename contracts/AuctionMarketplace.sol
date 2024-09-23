@@ -17,6 +17,7 @@ contract AuctionMarketplace is AutomationCompatibleInterface {
         uint256 highestBidPrice;      // Highest bid amount
         uint256 expiryDate;           // Expiration date of the auction
         bool isSold;                  // Whether the item is sold
+        string imageUrl;              // IPFS - New field for IPFS image URL
     }
 
     mapping(uint256 => AuctionItem) public items; // Mapping of item IDs to Auction Items
@@ -39,7 +40,8 @@ contract AuctionMarketplace is AutomationCompatibleInterface {
         string memory _name, 
         string memory _description, 
         uint256 _price, 
-        uint256 _expiryDate
+        uint256 _expiryDate,
+        string memory _imageUrl // IPFS
     ) public {
         itemCount++; // Increment the item counter to generate a new itemId
         items[itemCount] = AuctionItem({
@@ -51,7 +53,8 @@ contract AuctionMarketplace is AutomationCompatibleInterface {
             highestBidder: address(0),
             highestBidPrice: _price,
             expiryDate: _expiryDate,
-            isSold: false
+            isSold: false,
+            imageUrl: _imageUrl // IPFS
         });
         emit ItemPosted(itemCount, msg.sender, _price);
     }
