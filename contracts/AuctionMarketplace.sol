@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol"; // ETH/USD
 
 contract AuctionMarketplace is AutomationCompatibleInterface {
     
@@ -21,9 +22,17 @@ contract AuctionMarketplace is AutomationCompatibleInterface {
     mapping(uint256 => AuctionItem) public items; // Mapping of item IDs to Auction Items
     uint256 public itemCount;
 
+    AggregatorV3Interface internal priceFeed; // ETH/USD
+
     event ItemPosted(uint256 indexed itemId, address indexed owner, uint256 price);
     event NewHighestBid(uint256 indexed itemId, address indexed bidder, uint256 bidAmount);
     event AuctionFinalized(uint256 indexed itemId, address indexed newOwner, uint256 finalPrice);
+    event ETHUSDPriceFetched(uint256 ethUsdPrice); // ETH/USD
+
+    // ETH/USD
+    constructor(address _priceFeedAddress) {
+        priceFeed = AggregatorV3Interface(_priceFeedAddress);
+    }
 
     // Function to post a new item for auction
     function postItem(
@@ -94,5 +103,25 @@ contract AuctionMarketplace is AutomationCompatibleInterface {
         item.owner = payable(item.highestBidder);   // Transfer ownership to the highest bidder
 
         emit AuctionFinalized(_itemId, item.highestBidder, item.highestBidPrice);
+    }
+
+    // ETH/USD
+    function getLatestETHUSDPrice() public view returns (int256 price) {
+        (
+            , 
+            int256 answer,
+            ,
+            ,
+            
+        ) = priceFeed.latestRoundData();
+        require(answer > 0, "Invalid price data");
+    
+        return answer; // Price with 8 decimals (e.g., 2500.00 is returned as 250000000)
+    }
+
+    // ETH/USD
+    function emitETHUSDPrice() public {
+        int256 price = getLatestETHUSDPrice();
+        emit ETHUSDPriceFetched(uint256(price));
     }
 }
