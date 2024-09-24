@@ -121,10 +121,4 @@ contract AuctionMarketplace is AutomationCompatibleInterface {
     
         return answer; // Price with 8 decimals (e.g., 2500.00 is returned as 250000000)
     }
-
-    // ETH/USD
-    function emitETHUSDPrice() public {
-        int256 price = getLatestETHUSDPrice();
-        emit ETHUSDPriceFetched(uint256(price));
-    }
 }
